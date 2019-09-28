@@ -1,0 +1,87 @@
+[
+  {
+    "name": "player_r",
+    "x": 1,
+    "y": 2,
+    "xsize": 6,
+    "ysize": 5
+  },
+  {
+    "name": "player_l",
+    "x": 1,
+    "y": 8,
+    "xsize": 6,
+    "ysize": 5
+  },
+  {
+    "name": "player_d",
+    "x": 1,
+    "y": 14,
+    "xsize": 5,
+    "ysize": 6
+  },
+  {
+    "name": "player_u",
+    "x": 1,
+    "y": 21,
+    "xsize": 5,
+    "ysize": 6
+  },
+  {
+    "name": "enemy_r",
+    "x": 8,
+    "y": 2,
+    "xsize": 6,
+    "ysize": 5
+  },
+  {
+    "name": "enemy_l",
+    "x": 8,
+    "y": 8,
+    "xsize": 6,
+    "ysize": 5
+  },
+  {
+    "name": "enemy_d",
+    "x": 8,
+    "y": 14,
+    "xsize": 5,
+    "ysize": 6
+  },
+  {
+    "name": "enemy_u",
+    "x": 8,
+    "y": 21,
+    "xsize": 5,
+    "ysize": 6
+  },
+  {
+    "name": "wall_3",
+    "x": 15,
+    "y": 2,
+    "xsize": 6,
+    "ysize": 6
+  },
+  {
+    "name": "wall_2",
+    "x": 15,
+    "y": 9,
+    "xsize": 6,
+    "ysize": 6
+  },
+  {
+    "name": "wall_1",
+    "x": 15,
+    "y": 16,
+    "xsize": 6,
+    "ysize": 6
+  },
+  {
+    "name": "spawner",
+    "x": 22,
+    "y": 1,
+    "xsize": 9,
+    "ysize": 6
+  }
+
+]
