@@ -9,6 +9,9 @@ from bear_hug.resources import Atlas, XpLoader
 from bear_hug.sound import SoundListener
 from bear_hug.widgets import ClosingListener
 
+
+from entities import *
+
 ################################################################################
 # bear_hug boilerplate
 ################################################################################
@@ -25,7 +28,7 @@ dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 # If not subscribed, EntityTracker won't update its entity list correctly
 dispatcher.register_listener(EntityTracker(), ['ecs_create', 'ecs_destroy'])
 # Sound system
-jukebox = SoundListener({'step': 'dshoof.wav', 'shot': 'dsshotgn.wav'})
+jukebox = SoundListener({})
 dispatcher.register_listener(jukebox, 'play_sound')
 
 
@@ -51,20 +54,25 @@ colors = copy_shape(chars, 'gray')
 layout = ECSLayout(chars, colors)
 # Subscribing the layout to all events that have 'ecs' as a part of their
 # event_type
-dispatcher.register_listener(layout, '*ecs')
+dispatcher.register_listener(layout, 'all')
 
 ################################################################################
-# Creating game entities
+# Creating game-specific entities and events
 ################################################################################
 
+# All event types from this game are prefixed with 'ac_' for convenience
+
+# Damage. Value (entity_id, damage)
+dispatcher.register_event_type('ac_damage')
 # TODO: entities
 # TODO: score Label
+create_player_tank(dispatcher, atlas)
 
 ################################################################################
 # Launching
 ################################################################################
 
-t.start()
-t.add_widget(layout)
+terminal.start()
+terminal.add_widget(layout)
 
 loop.run()
