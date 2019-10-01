@@ -5,21 +5,38 @@ Functions that create entities, one for each type of entity.
 from bear_hug.bear_utilities import BearECSException
 from bear_hug.ecs import Entity, CollisionComponent, WalkerCollisionComponent,\
     WidgetComponent, PositionComponent, PassingComponent,\
-    SwitchWidgetComponent, Component, EntityTracker
+    SwitchWidgetComponent, Component, EntityTracker, DestructorComponent
 from bear_hug.event import BearEvent
-from bear_hug.widgets import SwitchingWidget
+from bear_hug.widgets import Widget, SwitchingWidget
 
 from collections import OrderedDict
 from json import dumps, loads
 
 
-def create_player_tank(dispatcher, atlas):
+################################################################################
+# Entity creation functions
+################################################################################
+
+# In my real project this would be handled by a dedicated entity factory, which
+# takes care of correct entity IDs, loads images from atlas, tracks the
+# dispatcher and whatever else may be useful for multiple entities, etc etc.
+#
+# However, since this is a quick-and-dirty demo with three types of entities,
+# a bunch of functions will suffice
+
+def create_player_tank(dispatcher, atlas, x, y):
+    # Creating the actual entity, which currently has only a name
     player = Entity(id='player')
+    # Adding all necessary components, in our case input (which also spawns
+    # bullets), two collision-related ones, position, health and a destructor
+    # for orderly entity removal.
     player.add_component(InputComponent(dispatcher))
-    player.add_component(DestructorHealthComponent(dispatcher, hitpoints=5))
     player.add_component(WalkerCollisionComponent(dispatcher))
-    player.add_component(PositionComponent(dispatcher, 10, 10))
     player.add_component(PassingComponent(dispatcher))
+    player.add_component(PositionComponent(dispatcher, x, y))
+    player.add_component(DestructorHealthComponent(dispatcher, hitpoints=5))
+    player.add_component(DestructorComponent(dispatcher))
+    # Also a WidgetComponent, which requires a Widget
     images_dict = {'player_r': atlas.get_element('player_r'),
                    'player_l': atlas.get_element('player_l'),
                    'player_d': atlas.get_element('player_d'),
@@ -34,26 +51,79 @@ def create_player_tank(dispatcher, atlas):
     return player
 
 
-def create_enemy_tank(dispatcher):
+def create_enemy_tank(dispatcher, atlas, entity_id, x, y):
     # ControllerComponent
     # DestructorHealthComponent
     # WalkerCollisionComponent
     # SwitchWidgetComponent
+    enemy = Entity(id=entity_id)
+    # Adding all necessary components, in our case input (which also spawns
+    # bullets), two collision-related ones, position, health and a destructor
+    # for orderly entity removal.
+    enemy.add_component(WalkerCollisionComponent(dispatcher))
+    enemy.add_component(PassingComponent(dispatcher))
+    enemy.add_component(PositionComponent(dispatcher, x, y))
+    enemy.add_component(DestructorHealthComponent(dispatcher, hitpoints=1))
+    enemy.add_component(DestructorComponent(dispatcher))
+    # Also a WidgetComponent, which requires a Widget
+    images_dict = {'enemy_r': atlas.get_element('enemy_r'),
+                   'enemy_l': atlas.get_element('enemy_l'),
+                   'enemy_d': atlas.get_element('enemy_d'),
+                   'enemy_u': atlas.get_element('enemy_u')}
+    enemy.add_component(SwitchWidgetComponent(dispatcher,
+                                               SwitchingWidget(
+                                                   images_dict=images_dict,
+                                                   initial_image='enemy_r')))
+    dispatcher.add_event(BearEvent('ecs_create', enemy))
+    dispatcher.add_event(BearEvent('ecs_add', (enemy.id,
+                                               enemy.position.x,
+                                               enemy.position.y)))
+    return enemy
+
+
+def create_wall(dispatcher, atlas, entity_id, x, y):
+    wall = Entity(entity_id)
+    wall.add_component(PositionComponent(dispatcher, x, y))
+    wall.add_component(VisualDamageHealthComponent(dispatcher,
+                                                   hitpoints=3,
+                                                   widgets_dict={3: 'wall_3',
+                                                                 2: 'wall_2',
+                                                                 1: 'wall_1'}))
+    wall.add_component(CollisionComponent(dispatcher))
+    wall.add_component(DestructorComponent(dispatcher))
+    wall.add_component(PassingComponent(dispatcher))
+    images_dict = {'wall_3': atlas.get_element('wall_3'),
+                   'wall_2': atlas.get_element('wall_2'),
+                   'wall_1': atlas.get_element('wall_1')}
+    wall.add_component(SwitchWidgetComponent(dispatcher,
+                                             SwitchingWidget(images_dict=images_dict,
+                                                             initial_image='wall_3')))
+    dispatcher.add_event(BearEvent('ecs_create', wall))
+    dispatcher.add_event(BearEvent('ecs_add', (wall.id,
+                                               wall.position.x,
+                                               wall.position.y)))
     pass
 
 
-def create_wall(dispatcher):
-    # VisualDamageHealthComponent
-    # CollisionComponent
-    # PassabilityComponent
-    # SwitchWidgetComponent
-    pass
-
-
-def create_bullet(dispatcher):
-    # WidgetComponent
-    # ProjectileCollisionComponent
-    pass
+def create_bullet(dispatcher, entity_id, x, y, vx, vy):
+    """
+    :param dispatcher:
+    :param pos:
+    :param speed:
+    :return:
+    """
+    bullet = Entity(entity_id)
+    bullet.add_component(WidgetComponent(dispatcher,
+                                         Widget([['*']], [['red']])))
+    bullet.add_component(PositionComponent(dispatcher, x, y,
+                                           vx, vy))
+    bullet.add_component(ProjectileCollisionComponent(dispatcher, damage=1))
+    bullet.add_component(DestructorComponent(dispatcher))
+    dispatcher.add_event(BearEvent('ecs_create', bullet))
+    dispatcher.add_event(BearEvent('ecs_add', (bullet.id,
+                                               bullet.position.x,
+                                               bullet.position.y)))
+    return bullet
 
 ################################################################################
 # Components
@@ -68,6 +138,11 @@ class InputComponent(Component):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, name='controller', **kwargs)
         self.dispatcher.register_listener(self, 'key_down')
+        self.bullet_count = 0
+        self.bullet_offsets = {(1, 0): (7, 2),
+                               (-1, 0): (-2, 2),
+                               (0, 1): (2, 7),
+                               (0, -1): (2, -2)}
 
     def on_event(self, event):
         x = super().on_event(event)
@@ -80,26 +155,33 @@ class InputComponent(Component):
         if event.event_type == 'key_down':
             moved = False
             if event.event_value == 'TK_SPACE':
-                # TODO: shoot
-                pass
+                bullet_offset = self.bullet_offsets[self.owner.position.last_move]
+                create_bullet(self.dispatcher, f'bullet_{self.bullet_count}',
+                              self.owner.position.x + bullet_offset[0],
+                              self.owner.position.y + bullet_offset[1],
+                              self.owner.position.last_move[0] * 20,
+                              self.owner.position.last_move[1] * 20)
+                self.bullet_count += 1
             elif event.event_value in ('TK_D', 'TK_RIGHT'):
-                last_move = (1, 0)
+                move = (1, 0)
                 self.owner.widget.switch_to_image('player_r')
                 moved = True
             elif event.event_value in ('TK_A', 'TK_LEFT'):
-                last_move = (-1, 0)
+                move = (-1, 0)
                 self.owner.widget.switch_to_image('player_l')
                 moved = True
             elif event.event_value in ('TK_S', 'TK_DOWN'):
-                last_move = (0, 1)
+                move = (0, 1)
                 self.owner.widget.switch_to_image('player_d')
                 moved = True
             elif event.event_value in ('TK_W', 'TK_UP'):
-                last_move = (0, -1)
+                move = (0, -1)
                 self.owner.widget.switch_to_image('player_u')
                 moved = True
             if moved:
-                self.owner.position.relative_move(*last_move)
+                # Remembered for shots
+                self.direction = move
+                self.owner.position.relative_move(*move)
         return r
 
 
@@ -163,7 +245,7 @@ class DestructorHealthComponent(HealthComponent):
             self.owner.destructor.destroy()
 
 
-class VisualDamageHealthComponent(Component):
+class VisualDamageHealthComponent(HealthComponent):
     """
     A health component for non-active damageable objects.
 
@@ -196,26 +278,25 @@ class VisualDamageHealthComponent(Component):
         return dumps(d)
 
 
-class ProjectileCollisionComponent(Component):
-    class ProjectileCollisionComponent(CollisionComponent):
-        """
-        A collision component that damages whatever its owner is collided into
-        """
+class ProjectileCollisionComponent(CollisionComponent):
+    """
+    A collision component that damages whatever its owner is collided into
+    """
 
-        def __init__(self, *args, damage=1, **kwargs):
-            super().__init__(*args, **kwargs)
-            self.damage = damage
+    def __init__(self, *args, damage=1, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.damage = damage
 
-        def collided_into(self, entity):
-            if not entity:
-                self.owner.destructor.destroy()
-            elif hasattr(EntityTracker().entities[entity], 'collision'):
-                self.dispatcher.add_event(BearEvent(event_type='ac_damage',
-                                                    event_value=(
-                                                    entity, self.damage)))
-                self.owner.destructor.destroy()
+    def collided_into(self, entity):
+        if not entity:
+            self.owner.destructor.destroy()
+        elif hasattr(EntityTracker().entities[entity], 'collision'):
+            self.dispatcher.add_event(BearEvent(event_type='ac_damage',
+                                                event_value=(
+                                                entity, self.damage)))
+            self.owner.destructor.destroy()
 
-        def __repr__(self):
-            d = loads(super().__repr__())
-            d['damage'] = self.damage
-            return dumps(d)
+    def __repr__(self):
+        d = loads(super().__repr__())
+        d['damage'] = self.damage
+        return dumps(d)

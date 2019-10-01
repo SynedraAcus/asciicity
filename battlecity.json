@@ -32,27 +32,27 @@
     "x": 8,
     "y": 2,
     "xsize": 6,
-    "ysize": 5
+    "ysize": 6
   },
   {
     "name": "enemy_l",
     "x": 8,
     "y": 8,
     "xsize": 6,
-    "ysize": 5
+    "ysize": 6
   },
   {
     "name": "enemy_d",
     "x": 8,
     "y": 14,
-    "xsize": 5,
+    "xsize": 6,
     "ysize": 6
   },
   {
     "name": "enemy_u",
     "x": 8,
     "y": 21,
-    "xsize": 5,
+    "xsize": 6,
     "ysize": 6
   },
   {

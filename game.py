@@ -7,8 +7,9 @@ from bear_hug.ecs_widgets import ECSLayout
 from bear_hug.event import BearEventDispatcher
 from bear_hug.resources import Atlas, XpLoader
 from bear_hug.sound import SoundListener
-from bear_hug.widgets import ClosingListener
+from bear_hug.widgets import ClosingListener, LoggingListener
 
+import sys
 
 from entities import *
 
@@ -30,7 +31,9 @@ dispatcher.register_listener(EntityTracker(), ['ecs_create', 'ecs_destroy'])
 # Sound system
 jukebox = SoundListener({})
 dispatcher.register_listener(jukebox, 'play_sound')
-
+# Setting up event logging in case we need to debug something
+logger = LoggingListener(sys.stderr)
+dispatcher.register_listener(logger, 'ecs_create')
 
 ################################################################################
 # loading game data
@@ -66,8 +69,9 @@ dispatcher.register_listener(layout, 'all')
 dispatcher.register_event_type('ac_damage')
 # TODO: entities
 # TODO: score Label
-create_player_tank(dispatcher, atlas)
-
+create_player_tank(dispatcher, atlas, 10, 10)
+create_wall(dispatcher, atlas, 'wall', 20, 20)
+create_enemy_tank(dispatcher, atlas, 'enemy', 30, 30)
 ################################################################################
 # Launching
 ################################################################################
