@@ -2,7 +2,7 @@
 A few listeners/widgets
 """
 
-from bear_hug.widgets import Label, Listener
+from bear_hug.widgets import Widget, Label, Listener
 from entities import create_enemy_tank
 
 
@@ -69,3 +69,19 @@ class SpawnerListener(Listener):
                 self.spawn_cd = self.cooldown
                 self.enemies_current += 1
                 self.counter += 1
+
+
+class GameOverListener(Listener):
+    """
+    Produces a GAME OVER widget
+    """
+    def __init__(self, *args, widget=None, **kwargs):
+        print (args)
+        super().__init__(*args, *kwargs)
+        self.widget = widget
+
+    def on_event(self, event):
+        if event.event_type == 'ecs_destroy' and event.event_value == 'player':
+            self.terminal.add_widget(self.widget,
+                                     pos=(20, 20),
+                                     layer=5)

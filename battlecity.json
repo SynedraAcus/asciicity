@@ -82,6 +82,12 @@
     "y": 1,
     "xsize": 9,
     "ysize": 6
+  },
+  {
+    "name": "game_over",
+    "x": 0,
+    "y": 28,
+    "xsize": 35,
+    "ysize": 18
   }
-
 ]

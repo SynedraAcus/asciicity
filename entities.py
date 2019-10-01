@@ -210,6 +210,11 @@ class ControllerComponent(Component):
         self.shoot_delay = 1
         self.move_cd = self.move_delay
         self.shoot_cd = self.shoot_delay
+        # Prevents a bug where two tanks collide into each other (eg when one of
+        # them spawned on top of another) and infinitely trying to rotate, thus
+        # creating more collisions which cause them to try and rotate, and so
+        # on and so forth.
+        self.rotated_this_tick = False
         self.direction = None
         self.bullet_count = 0
         self.bullet_offsets = {(1, 0): (7, 2),
@@ -223,6 +228,7 @@ class ControllerComponent(Component):
 
     def on_event(self, event):
         if event.event_type == 'tick':
+            self.rotated_this_tick = False
             self.move_cd -= event.event_value
             self.shoot_cd -= event.event_value
             if self.move_cd <= 0:
@@ -257,7 +263,6 @@ class ControllerComponent(Component):
                         self.bullet_count += 1
                         self.shoot_cd = self.shoot_delay
                 else:
-                    print('Choosing')
                     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
                     if dx > 0:
                         directions.extend([(1, 0)] * int(dx / 10))
@@ -270,11 +275,14 @@ class ControllerComponent(Component):
                     self.direction = choice(directions)
                     self.owner.widget.switch_to_image(self.images[self.direction])
                 self.move_cd = self.move_delay
-        elif event.event_type == 'ecs_collision' and event.event_value[0] == self.owner.id:
+        elif event.event_type == 'ecs_collision'\
+                and event.event_value[0] == self.owner.id \
+                and not self.rotated_this_tick:
             if event.event_value[1] is None or hasattr(
                                 EntityTracker().entities[event.event_value[1]],
                                 'collision'):
                 self.direction = None
+                self.rotated_this_tick = True
 
 
 class HealthComponent(Component):

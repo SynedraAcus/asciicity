@@ -7,7 +7,7 @@ from bear_hug.ecs_widgets import ECSLayout
 from bear_hug.event import BearEventDispatcher
 from bear_hug.resources import Atlas, XpLoader
 from bear_hug.sound import SoundListener
-from bear_hug.widgets import ClosingListener, LoggingListener
+from bear_hug.widgets import Widget, ClosingListener, LoggingListener
 
 import sys
 
@@ -51,7 +51,7 @@ atlas = Atlas(XpLoader('battlecity.xp'),
 # Note that it's 80x60, while the window is 85x60. Rightmost 5 columns will be
 # used for score.
 
-chars = [['.' for x in range(84)] for y in range(60)]
+chars = [[' ' for x in range(84)] for y in range(60)]
 colors = copy_shape(chars, 'gray')
 layout = ECSLayout(chars, colors)
 # Subscribing the layout to all events that have 'ecs' as a part of their
@@ -97,11 +97,16 @@ spawner = SpawnerListener(dispatcher=dispatcher,
                           cooldown=5.0,
                           enemies=3)
 dispatcher.register_listener(spawner, ['tick', 'ecs_destroy'])
-# These two are responsible for the events
+# These two are sidebar widgets, which can accept the events but are outside the
+# ECSLayout (ie game map)
 score = ScoreLabel(terminal)
 dispatcher.register_listener(score, 'ecs_destroy')
 hp = HPLabel(terminal)
 dispatcher.register_listener(hp, 'ac_damage')
+# And this listener should display the GAME OVER widget
+gameover_widget = Widget(*atlas.get_element('game_over'))
+gameover_listener = GameOverListener(terminal, widget=gameover_widget)
+dispatcher.register_listener(gameover_listener, 'ecs_destroy')
 
 ################################################################################
 # Launching
