@@ -11,7 +11,7 @@ from bear_hug.widgets import Widget, SwitchingWidget
 
 from collections import OrderedDict
 from json import dumps, loads
-
+from random import choice
 
 ################################################################################
 # Entity creation functions
@@ -65,6 +65,7 @@ def create_enemy_tank(dispatcher, atlas, entity_id, x, y):
     enemy.add_component(PositionComponent(dispatcher, x, y))
     enemy.add_component(DestructorHealthComponent(dispatcher, hitpoints=1))
     enemy.add_component(DestructorComponent(dispatcher))
+    enemy.add_component(ControllerComponent(dispatcher))
     # Also a WidgetComponent, which requires a Widget
     images_dict = {'enemy_r': atlas.get_element('enemy_r'),
                    'enemy_l': atlas.get_element('enemy_l'),
@@ -186,7 +187,79 @@ class InputComponent(Component):
 
 
 class ControllerComponent(Component):
-    pass
+    """
+    Enemy controller component.
+
+    If has direct line to the player, moves towards him and shoots.
+    Otherwise randomly chooses the direction (weighted so that it would be
+    mostly towards the player) and keeps moving. If collided into something,
+    reconsiders the direction.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.dispatcher.register_listener(self, ['tick', 'ecs_collision'])
+        # Move 5 steps a second, shoot twice a second
+        self.move_delay = 0.1
+        self.shoot_delay = 1
+        self.move_cd = self.move_delay
+        self.shoot_cd = self.shoot_delay
+        self.direction = None
+        self.bullet_count = 0
+        self.bullet_offsets = {(1, 0): (7, 2),
+                               (-1, 0): (-2, 2),
+                               (0, 1): (2, 7),
+                               (0, -1): (2, -2)}
+        self.images = {(1, 0): 'enemy_r',
+                       (-1, 0): 'enemy_l',
+                       (0, 1): 'enemy_d',
+                       (0, -1): 'enemy_u'}
+
+    def on_event(self, event):
+        if event.event_type == 'tick':
+            self.move_cd -= event.event_value
+            self.shoot_cd -= event.event_value
+            if self.move_cd <= 0:
+                player_x = EntityTracker().entities['player'].position.x
+                player_y = EntityTracker().entities['player'].position.y
+                dx = player_x - self.owner.position.x
+                dy = player_y - self.owner.position.y
+                # Turn towards player if has direct line of fire
+                if abs(dx) < 3:
+                    self.direction = (0, 1 if dy > 0 else -1)
+                    self.owner.widget.switch_to_image(
+                        self.images[self.direction])
+                if abs(dy) < 3:
+                    self.direction = (1 if dx > 0 else -1, 0)
+                    self.owner.widget.switch_to_image(
+                        self.images[self.direction])
+                if self.direction:
+                    self.owner.position.relative_move(*self.direction)
+                    # Shoot if necessary
+                    if self.shoot_cd <= 0 and (abs(dx) < 3 or abs (dy) < 3):
+                        offset = self.bullet_offsets[self.direction]
+                        create_bullet(self.dispatcher,
+                                      f'{self.owner.id}_{self.bullet_count}',
+                                      self.owner.position.x + offset[0],
+                                      self.owner.position.y + offset[1],
+                                      self.direction[0] * 20,
+                                      self.direction[1] * 20)
+                        self.bullet_count += 1
+                        self.shoot_cd = self.shoot_delay
+                else:
+                    directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+                    if dx > 0:
+                        directions.extend([(1, 0)] * int(dx / 10))
+                    elif dx < 0:
+                        directions.extend([(-1, 0)] * int(dx / -10))
+                    if dy > 0:
+                        directions.extend([(0, 1)] * int(dy / 10))
+                    elif dy < 0:
+                        directions.extend([(0, -1)] * int(dy / -10))
+                    self.direction = choice(directions)
+                    self.owner.widget.switch_to_image(self.images[self.direction])
+                self.move_cd = self.move_delay
+        elif event.event_type == 'ecs_collision' and event.event_value[0] == self.owner.id:
+            self.direction = None
 
 
 class HealthComponent(Component):
