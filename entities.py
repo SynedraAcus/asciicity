@@ -21,8 +21,9 @@ from random import choice
 # takes care of correct entity IDs, loads images from atlas, tracks the
 # dispatcher and whatever else may be useful for multiple entities, etc etc.
 #
-# However, since this is a quick-and-dirty demo with three types of entities,
+# However, since this is a quick-and-dirty demo with five types of entities,
 # a bunch of functions will suffice
+
 
 def create_player_tank(dispatcher, atlas, x, y):
     # Creating the actual entity, which currently has only a name
@@ -107,12 +108,6 @@ def create_wall(dispatcher, atlas, entity_id, x, y):
 
 
 def create_bullet(dispatcher, entity_id, x, y, vx, vy):
-    """
-    :param dispatcher:
-    :param pos:
-    :param speed:
-    :return:
-    """
     bullet = Entity(entity_id)
     bullet.add_component(WidgetComponent(dispatcher,
                                          Widget([['*']], [['red']])))
@@ -125,6 +120,18 @@ def create_bullet(dispatcher, entity_id, x, y, vx, vy):
                                                bullet.position.x,
                                                bullet.position.y)))
     return bullet
+
+
+def create_spawner_house(dispatcher, atlas, x, y):
+    house = Entity('house')
+    house.add_component(WidgetComponent(dispatcher,
+                                        Widget(*atlas.get_element('spawner'))))
+    house.add_component(DestructorComponent(dispatcher))
+    house.add_component(PositionComponent(dispatcher, x, y))
+    dispatcher.add_event(BearEvent('ecs_create', house))
+    dispatcher.add_event(BearEvent('ecs_add', (house.id,
+                                               house.position.x,
+                                               house.position.y)))
 
 ################################################################################
 # Components
@@ -219,8 +226,12 @@ class ControllerComponent(Component):
             self.move_cd -= event.event_value
             self.shoot_cd -= event.event_value
             if self.move_cd <= 0:
-                player_x = EntityTracker().entities['player'].position.x
-                player_y = EntityTracker().entities['player'].position.y
+                try:
+                    player_x = EntityTracker().entities['player'].position.x
+                    player_y = EntityTracker().entities['player'].position.y
+                except KeyError:
+                    # DO NOTHING AFTER THE PLAYER IS DEAD
+                    return
                 dx = player_x - self.owner.position.x
                 dy = player_y - self.owner.position.y
                 # Turn towards player if has direct line of fire
@@ -232,13 +243,13 @@ class ControllerComponent(Component):
                     self.direction = (1 if dx > 0 else -1, 0)
                     self.owner.widget.switch_to_image(
                         self.images[self.direction])
-                if self.direction:
+                if self.direction is not None:
                     self.owner.position.relative_move(*self.direction)
                     # Shoot if necessary
-                    if self.shoot_cd <= 0 and (abs(dx) < 3 or abs (dy) < 3):
+                    if self.shoot_cd <= 0 and (abs(dx) < 3 or abs(dy) < 3):
                         offset = self.bullet_offsets[self.direction]
                         create_bullet(self.dispatcher,
-                                      f'{self.owner.id}_{self.bullet_count}',
+                                      f'{self.owner.id}_bullet{self.bullet_count}',
                                       self.owner.position.x + offset[0],
                                       self.owner.position.y + offset[1],
                                       self.direction[0] * 20,
@@ -246,6 +257,7 @@ class ControllerComponent(Component):
                         self.bullet_count += 1
                         self.shoot_cd = self.shoot_delay
                 else:
+                    print('Choosing')
                     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
                     if dx > 0:
                         directions.extend([(1, 0)] * int(dx / 10))
@@ -259,7 +271,10 @@ class ControllerComponent(Component):
                     self.owner.widget.switch_to_image(self.images[self.direction])
                 self.move_cd = self.move_delay
         elif event.event_type == 'ecs_collision' and event.event_value[0] == self.owner.id:
-            self.direction = None
+            if event.event_value[1] is None or hasattr(
+                                EntityTracker().entities[event.event_value[1]],
+                                'collision'):
+                self.direction = None
 
 
 class HealthComponent(Component):
