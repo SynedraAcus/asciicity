@@ -30,7 +30,10 @@ dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 # If not subscribed, EntityTracker won't update its entity list correctly
 dispatcher.register_listener(EntityTracker(), ['ecs_create', 'ecs_destroy'])
 # Sound system
-jukebox = SoundListener({})
+jukebox = SoundListener({'shot': 'shot.wav',
+                         'explosion': 'explosion.wav'})
+# https://freesound.org/people/EMSIarma/sounds/108852/
+# https://freesound.org/people/FlashTrauma/sounds/398283/
 dispatcher.register_listener(jukebox, 'play_sound')
 
 
@@ -68,7 +71,7 @@ dispatcher.register_listener(layout, 'all')
 dispatcher.register_event_type('ac_damage')
 # Setting up logging for this kind of event, just in case
 logger = LoggingListener(sys.stderr)
-dispatcher.register_listener(logger, 'ecs_create')
+dispatcher.register_listener(logger, ['ac_damage', 'play_sound'])
 
 # Creating in-game entities
 create_player_tank(dispatcher, atlas, 30, 50)

@@ -170,6 +170,7 @@ class InputComponent(Component):
                               self.owner.position.last_move[0] * 20,
                               self.owner.position.last_move[1] * 20)
                 self.bullet_count += 1
+                self.dispatcher.add_event(BearEvent('play_sound', 'shot'))
             elif event.event_value in ('TK_D', 'TK_RIGHT'):
                 move = (1, 0)
                 self.owner.widget.switch_to_image('player_r')
@@ -262,6 +263,8 @@ class ControllerComponent(Component):
                                       self.direction[1] * 20)
                         self.bullet_count += 1
                         self.shoot_cd = self.shoot_delay
+                        self.dispatcher.add_event(
+                            BearEvent('play_sound', 'shot'))
                 else:
                     directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]
                     if dx > 0:
@@ -338,7 +341,10 @@ class DestructorHealthComponent(HealthComponent):
     """
     def process_hitpoint_update(self):
         if self.hitpoints == 0 and hasattr(self.owner, 'destructor'):
+            # self.dispatcher.add_event(BearEvent('play_sound', 'explosion'))
+            self.dispatcher.add_event(BearEvent('play_sound', 'player_explosion'))
             self.owner.destructor.destroy()
+
 
 
 class VisualDamageHealthComponent(HealthComponent):
