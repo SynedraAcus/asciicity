@@ -86,20 +86,21 @@ def create_enemy_tank(dispatcher, atlas, entity_id, x, y):
 def create_wall(dispatcher, atlas, entity_id, x, y):
     wall = Entity(entity_id)
     wall.add_component(PositionComponent(dispatcher, x, y))
-    wall.add_component(VisualDamageHealthComponent(dispatcher,
-                                                   hitpoints=3,
-                                                   widgets_dict={3: 'wall_3',
-                                                                 2: 'wall_2',
-                                                                 1: 'wall_1'}))
     wall.add_component(CollisionComponent(dispatcher))
-    wall.add_component(DestructorComponent(dispatcher))
     wall.add_component(PassingComponent(dispatcher))
+    wall.add_component(DestructorComponent(dispatcher))
     images_dict = {'wall_3': atlas.get_element('wall_3'),
                    'wall_2': atlas.get_element('wall_2'),
                    'wall_1': atlas.get_element('wall_1')}
     wall.add_component(SwitchWidgetComponent(dispatcher,
                                              SwitchingWidget(images_dict=images_dict,
                                                              initial_image='wall_3')))
+    wall.add_component(VisualDamageHealthComponent(dispatcher,
+                                                   hitpoints=3,
+                                                   widgets_dict={3: 'wall_3',
+                                                                 2: 'wall_2',
+                                                                 1: 'wall_1'}))
+
     dispatcher.add_event(BearEvent('ecs_create', wall))
     dispatcher.add_event(BearEvent('ecs_add', (wall.id,
                                                wall.position.x,

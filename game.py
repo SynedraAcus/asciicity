@@ -25,6 +25,11 @@ terminal = BearTerminal(font_path='cp437_12x12.png',
 # Setting up the event loop
 dispatcher = BearEventDispatcher()
 loop = BearLoop(terminal, dispatcher)
+
+################################################################################
+# Listeners
+################################################################################
+
 # This is used to process window closing
 dispatcher.register_listener(ClosingListener(), ['misc_input', 'tick'])
 # If not subscribed, EntityTracker won't update its entity list correctly
@@ -35,16 +40,13 @@ jukebox = SoundListener({'shot': 'shot.wav',
 # https://freesound.org/people/EMSIarma/sounds/108852/
 # https://freesound.org/people/FlashTrauma/sounds/398283/
 dispatcher.register_listener(jukebox, 'play_sound')
-
-
-################################################################################
-# loading game data
-################################################################################
-
-# Loading image atlas
-atlas = Atlas(XpLoader('battlecity.xp'),
-              'battlecity.json')
-# TODO: add sounds
+# Damage event type. Value set to (entity_id, damage)
+# This event type is prefixed with 'ac' (for AsciiCity) to separate it from
+# other event types
+dispatcher.register_event_type('ac_damage')
+# Setting up logging for this kind of event, just in case
+logger = LoggingListener(sys.stderr)
+dispatcher.register_listener(logger, ['ac_damage', 'play_sound'])
 
 ################################################################################
 # Layout
@@ -62,16 +64,12 @@ layout = ECSLayout(chars, colors)
 dispatcher.register_listener(layout, 'all')
 
 ################################################################################
-# Creating game-specific entities and events
+# Creating game entities
 ################################################################################
 
-# Damage event type. Value set to (entity_id, damage)
-# This event type is prefixed with 'ac' (for AsciiCity) to separate it from
-# other event types
-dispatcher.register_event_type('ac_damage')
-# Setting up logging for this kind of event, just in case
-logger = LoggingListener(sys.stderr)
-dispatcher.register_listener(logger, ['ac_damage', 'play_sound'])
+# Loading image atlas
+atlas = Atlas(XpLoader('battlecity.xp'),
+              'battlecity.json')
 
 # Creating in-game entities
 create_player_tank(dispatcher, atlas, 30, 50)
