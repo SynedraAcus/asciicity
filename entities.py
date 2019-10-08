@@ -343,9 +343,8 @@ class DestructorHealthComponent(HealthComponent):
     def process_hitpoint_update(self):
         if self.hitpoints == 0 and hasattr(self.owner, 'destructor'):
             # self.dispatcher.add_event(BearEvent('play_sound', 'explosion'))
-            self.dispatcher.add_event(BearEvent('play_sound', 'player_explosion'))
+            self.dispatcher.add_event(BearEvent('play_sound', 'explosion'))
             self.owner.destructor.destroy()
-
 
 
 class VisualDamageHealthComponent(HealthComponent):

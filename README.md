@@ -2,10 +2,11 @@
 
 An ASCII-art Battle City clone.
 
+![Screenshot](screen.png)
+
 ## Installation and launch
 
-
-1. python3 -m pip install bear_hug
-2. Download the repo
-3. cd asciicity
-4. python3 game.py 
+1. Install [bear_hug](https://github.com/synedraacus/bear_hug) either through
+pip or manually. Requires Python 3.6+.
+2. Download/clone this repository.
+3. Launch `game.py` 

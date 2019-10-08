@@ -73,7 +73,6 @@ atlas = Atlas(XpLoader('battlecity.xp'),
 
 # Creating in-game entities
 create_player_tank(dispatcher, atlas, 30, 50)
-create_wall(dispatcher, atlas, 'wall', 20, 20)
 wall_array = [[0 for _ in range(14)],
               [0 for _ in range(14)],
               [1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
